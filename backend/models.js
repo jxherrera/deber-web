@@ -1,45 +1,56 @@
-// Configuración de Sequelize para conectar a PostgreSQL
-const { Sequelize, DataTypes } = require('sequelize');
+const mongoose = require('mongoose');
 require('dotenv').config();
 
-// Configuración usando variables de entorno
-const sequelize = new Sequelize(
-  process.env.DB_NAME,
-  process.env.DB_USER,
-  process.env.DB_PASSWORD,
-  {
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT || 5432,
-    dialect: 'postgres',
+const connectDB = async () => {
+  try {
+await mongoose.connect('mongodb://localhost:27017/persistencia_db');
+    console.log('✅ Conectado a MongoDB');
+  } catch (error) {
+    console.error('❌ Error conectando a MongoDB:', error.message);
+    process.exit(1);
   }
-);
+};
 
-// Definición del modelo Usuario
-const Usuario = sequelize.define('Usuario', {
+const usuarioSchema = new mongoose.Schema({
   nombre: {
-    type: DataTypes.STRING,
-    allowNull: false
+    type: String,     
+    required: true    
   },
   email: {
-    type: DataTypes.STRING,
-    allowNull: false,
+    type: String,
+    required: true,
     unique: true
   }
+}, {
+  timestamps: true, 
+  toJSON: { virtuals: true }, 
+  toObject: { virtuals: true }
 });
 
-// Definición del modelo Post
-const Post = sequelize.define('Post', {
+usuarioSchema.virtual('posts', {
+  ref: 'Post',          
+  localField: '_id',    
+  foreignField: 'autor' 
+});
+
+const postSchema = new mongoose.Schema({
   titulo: {
-    type: DataTypes.STRING,
-    allowNull: false
+    type: String,
+    required: true
   },
   contenido: {
-    type: DataTypes.TEXT
+    type: String      
+  },
+  autor: {            
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Usuario',
+    required: true
   }
+}, {
+  timestamps: true
 });
 
-// Relaciones
-Usuario.hasMany(Post, { as: 'posts', foreignKey: 'usuarioId' });
-Post.belongsTo(Usuario, { as: 'autor', foreignKey: 'usuarioId' });
+const Usuario = mongoose.model('Usuario', usuarioSchema);
+const Post = mongoose.model('Post', postSchema);
 
-module.exports = { sequelize, Usuario, Post };
+module.exports = { connectDB, Usuario, Post };
